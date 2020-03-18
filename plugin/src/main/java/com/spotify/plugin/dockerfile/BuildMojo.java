@@ -112,6 +112,9 @@ public class BuildMojo extends AbstractDockerMojo {
   @Parameter(property = "dockerfile.build.cacheFrom")
   private List<String> cacheFrom;
 
+  @Parameter(property = "dockerfile.build.cliParams")
+  private Map<String,String> cliParams;
+
   @Parameter(property = "dockerfile.build.squash", defaultValue = "false")
   private boolean squash;
 
@@ -134,7 +137,7 @@ public class BuildMojo extends AbstractDockerMojo {
     }
     final String imageId = buildImage(
         dockerClient, log, verbose, contextDirectory.toPath(), dockerfilePath, repository, tag, 
-        pullNewerImage, noCache, buildArgs, cacheFrom, squash);
+        pullNewerImage, noCache, buildArgs, cacheFrom, squash, cliParams);
 
     if (imageId == null) {
       log.warn("Docker build was successful, but no image was built");
@@ -169,7 +172,8 @@ public class BuildMojo extends AbstractDockerMojo {
                            boolean noCache,
                            @Nullable Map<String,String> buildArgs,
                            @Nullable List<String> cacheFrom,
-                           boolean squash)
+                           boolean squash,
+                           @Nullable Map<String,String> cliParams)
       throws MojoExecutionException, MojoFailureException {
 
     log.info(MessageFormat.format("Building Docker context {0}", contextDirectory));
@@ -193,6 +197,12 @@ public class BuildMojo extends AbstractDockerMojo {
 
     if (buildArgs != null && !buildArgs.isEmpty()) {
       buildParameters.add(new DockerClient.BuildParam("buildargs", encodeBuildParam(buildArgs)));
+    }
+
+    if (cliParams != null && !cliParams.isEmpty()) {
+      for (final Map.Entry<String,String> cliParam: cliParams.entrySet()) {
+        buildParameters.add(DockerClient.BuildParam.create(cliParam.getKey(), cliParam.getValue()));
+      }
     }
 
     if (cacheFrom != null) {
